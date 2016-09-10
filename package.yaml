@@ -1,0 +1,19 @@
+name: repl-server
+version: "0.1"
+
+dependencies:
+  - base
+
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs:
+      - test
+    dependencies:
+      - hspec
+
+executables:
+  repl-server:
+    main: repl-server.hs
+    source-dirs:
+      - src
