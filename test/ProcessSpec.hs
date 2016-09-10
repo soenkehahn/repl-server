@@ -17,10 +17,6 @@ spec = around_ inTempDirectory $ do
   describe "withProcess" $ do
     it "runs the given process concurrently" $ do
       withProcess "touch file" $ \ (to, from, _) -> do
-        let waitForFile = do
-              files <- getDirectoryContents "."
-              when (not ("file" `elem` files)) $
-                waitForFile
         waitForFile
       readFile "file" `shouldReturn` ""
 
@@ -38,3 +34,9 @@ spec = around_ inTempDirectory $ do
         result <- hGetLine from
         result `shouldSatisfy` ("bbb" `isInfixOf`)
         hPutStrLn to ":quit"
+
+waitForFile :: IO ()
+waitForFile = do
+  files <- getDirectoryContents "."
+  when (not ("file" `elem` files)) $
+    waitForFile

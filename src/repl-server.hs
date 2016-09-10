@@ -7,4 +7,4 @@ import           System.IO
 
 main :: IO ()
 main = withCli $ \ config -> do
-  run config stdout
+  replServer config stdout

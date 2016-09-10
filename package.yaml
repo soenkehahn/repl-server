@@ -6,6 +6,10 @@ dependencies:
   - process
   - getopt-generics
   - unix
+  - http-types
+  - network
+  - wai
+  - warp
 
 ghc-options:
   - -threaded
@@ -19,6 +23,7 @@ tests:
     dependencies:
       - hspec
       - silently
+      - mockery
 
 executables:
   repl-server:
