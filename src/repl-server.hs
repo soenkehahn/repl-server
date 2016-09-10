@@ -1,3 +1,10 @@
 
+import           WithCli
+
+import           ReplServer
+import           System.IO
+
+
 main :: IO ()
-main = return ()
+main = withCli $ \ config -> do
+  run config stdout

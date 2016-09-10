@@ -3,14 +3,22 @@ version: "0.1"
 
 dependencies:
   - base
+  - process
+  - getopt-generics
+  - unix
+
+ghc-options:
+  - -threaded
 
 tests:
   spec:
     main: Spec.hs
     source-dirs:
       - test
+      - src
     dependencies:
       - hspec
+      - silently
 
 executables:
   repl-server:
