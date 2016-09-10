@@ -1,22 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module ReplServerSpec where
 
-import           Control.Concurrent
 import           Control.Exception
-import           Control.Monad
 import           Data.List
-import           System.IO
+import           Data.String.Conversions
 import           System.IO.Silently
-import           System.Posix.Process
-import           System.Posix.Signals
-import           System.Process
 import           System.Timeout
 import           Test.Hspec
 import           Test.Mockery.Directory
 
 import           ProcessSpec
 import           ReplServer
+import           ReplClient
 
 spec :: Spec
 spec = around_ inTempDirectory $ do
@@ -46,9 +43,20 @@ spec = around_ inTempDirectory $ do
         waitForFile
       output `shouldSatisfy` ("65" `isInfixOf`)
 
+  describe "replServer & replClient" $ do
+    it "triggers a new invocation of the repl action" $ do
+      writeFile "file" "foo"
+      let config = Config {
+            replCommand = "ghci",
+            replAction = "readFile \"file\""
+          }
+      withThread (replServer config) $ do
+        output :: String <- cs <$> replClient
+        output `shouldSatisfy` ("foo" `isInfixOf`)
+
 shouldTerminate :: IO a -> IO a
 shouldTerminate action = do
-  result <- timeout (10 ^ 6) action
+  result <- timeout 1000000 action
   case result of
     Nothing -> throwIO $ ErrorCall "didn't terminate"
     Just a -> return a

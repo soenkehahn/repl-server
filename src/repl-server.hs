@@ -6,5 +6,4 @@ import           System.IO
 
 
 main :: IO ()
-main = withCli $ \ config -> do
-  replServer config stdout
+main = withCli replServer

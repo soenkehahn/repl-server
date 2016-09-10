@@ -1,26 +1,25 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module ReplServer where
 
 import           Control.Concurrent
 import           Control.Exception
 import           Control.Monad
+import           Data.ByteString.Lazy (ByteString)
 import           Data.String
+import           Data.String.Conversions
 import           Network.HTTP.Types
-import           Network.Socket
+import           Network.Socket hiding (recv)
 import           Network.Wai
 import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Prelude ()
 import           Prelude.Compat
-import           System.Directory
 import           System.IO
-import           System.IO.Error
-import           System.Posix.Files
-import           System.Posix.Signals
-import           System.Process
 import           WithCli
 
 import           Process
+import           Socket
 
 data Config
   = Config {
@@ -34,18 +33,27 @@ instance HasArguments Config
 replServer :: Config -> IO ()
 replServer config = do
   withProcess (replCommand config) $ \ (to, from, _) -> do
-    withThread (connectHandles from stdout) $ do
-      hPutStrLn to (replAction config)
-      forever $ threadDelay 1000000
+    mvar <- newMVar ""
+    withThread (connectHandles from (mvar, stdout)) $ do
+      withApplication (app mvar) $ do
+        hPutStrLn to (replAction config)
+        forever $ threadDelay 1000000
 
-connectHandles :: Handle -> Handle -> IO ()
-connectHandles from to = inner
+app :: MVar ByteString -> Application
+app mvar _request respond = do
+  threadDelay 300000
+  output <- readMVar mvar
+  respond $ responseLBS ok200 [] output
+
+connectHandles :: Handle -> (MVar ByteString, Handle) -> IO ()
+connectHandles from (mvar, to) = inner
   where
     inner = do
       eof <- hIsEOF from
       when (not eof) $ do
         c <- hGetChar from
         hPutChar to c
+        modifyMVar_ mvar (\ old -> return (old <> cs [c]))
         inner
 
 withApplication :: Application -> IO a -> IO a
@@ -55,21 +63,6 @@ withApplication application action = do
     bracket_ (bind sock socketAddr) removeSocketFile $ do
       listen sock maxListenQueue
       withThread (runSettingsSocket defaultSettings sock application) action
-
-socketName :: String
-socketName = ".repl-server.socket"
-
-socketAddr :: SockAddr
-socketAddr = SockAddrUnix socketName
-
-newSocket :: IO Socket
-newSocket = socket AF_UNIX Stream 0
-
-withSocket :: (Socket -> IO a) -> IO a
-withSocket action = bracket newSocket close action
-
-removeSocketFile :: IO ()
-removeSocketFile = void $ tryJust (guard . isDoesNotExistError) (removeFile socketName)
 
 withThread :: IO () -> IO a -> IO a
 withThread asyncAction action = do
