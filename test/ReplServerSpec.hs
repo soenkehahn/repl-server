@@ -53,6 +53,9 @@ spec = around_ inTempDirectory $ do
       withThread (replServer config) $ do
         output :: String <- cs <$> replClient
         output `shouldSatisfy` ("foo" `isInfixOf`)
+        writeFile "file" "bar"
+        output :: String <- cs <$> replClient
+        output `shouldSatisfy` ("bar" `isInfixOf`)
 
 shouldTerminate :: IO a -> IO a
 shouldTerminate action = do

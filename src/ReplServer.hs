@@ -35,13 +35,14 @@ replServer config = do
   withProcess (replCommand config) $ \ (to, from, _) -> do
     mvar <- newMVar ""
     withThread (connectHandles from (mvar, stdout)) $ do
-      withApplication (app mvar) $ do
+      withApplication (app config to mvar) $ do
         hPutStrLn to (replAction config)
         forever $ threadDelay 1000000
 
-app :: MVar ByteString -> Application
-app mvar _request respond = do
-  threadDelay 300000
+app :: Config -> Handle -> MVar ByteString -> Application
+app config to mvar _request respond = do
+  hPutStrLn to (replAction config)
+  threadDelay 300000 -- fixme!
   output <- readMVar mvar
   respond $ responseLBS ok200 [] output
 
