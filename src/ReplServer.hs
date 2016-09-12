@@ -35,37 +35,37 @@ instance HasArguments Config
 
 replServer :: Config -> IO ()
 replServer config = do
-  withProcess (replCommand config) $ \ (to, from, _) -> do
-    toNextPrompt config from
-    executeReplAction config to from
-    withApplication (app config to from) $ do
+  withProcess (replCommand config) $ \ (to, from, fromStdErr, _) -> do
+    _ <- toNextPrompt config from
+    _ <- executeReplAction config to from fromStdErr
+    withApplication (app config to from fromStdErr) $ do
       forever $ threadDelay 1000000
 
 toNextPrompt :: Config -> Handle -> IO String
 toNextPrompt config from = do
-  output <- readUntil (replPrompt config) from
-  return output
+  readUntil (replPrompt config) from
 
-executeReplAction :: Config -> Handle -> Handle -> IO String
-executeReplAction config to from = do
-  hPutStrLn to (replAction config) >> hFlush to
-  toNextPrompt config from
+executeReplAction :: Config -> Handle -> Handle -> Handle -> IO String
+executeReplAction config to from fromStdErr = do
+  (errOutput, stdOutput) <- captureWhile fromStdErr $ do
+    hPutStrLn to (replAction config) >> hFlush to
+    toNextPrompt config from
+  hPutStrLn stderr errOutput >> hFlush stderr
+  return (errOutput ++ "\n===\n" ++ stdOutput)
 
-app :: Config -> Handle -> Handle -> Application
-app config to from _request respond = do
-  output <- executeReplAction config to from
+app :: Config -> Handle -> Handle -> Handle -> Application
+app config to from fromStdErr _request respond = do
+  output <- executeReplAction config to from fromStdErr
   respond $ responseLBS ok200 [] (cs output)
 
 connectHandles :: Handle -> (MVar ByteString, Handle) -> IO ()
-connectHandles from (mvar, to) = inner
-  where
-    inner = do
-      eof <- hIsEOF from
-      when (not eof) $ do
-        c <- hGetChar from
-        hPutChar to c
-        modifyMVar_ mvar (\ old -> return (old <> cs [c]))
-        inner
+connectHandles from (mvar, to) = do
+  eof <- hIsEOF from
+  when (not eof) $ do
+    c <- hGetChar from
+    hPutChar to c
+    modifyMVar_ mvar (\ old -> return (old <> cs [c]))
+    connectHandles from (mvar, to)
 
 withApplication :: Application -> IO a -> IO a
 withApplication application action = do

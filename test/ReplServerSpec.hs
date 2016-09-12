@@ -8,6 +8,7 @@ import           Control.Exception
 import           Data.List
 import           Data.String.Conversions
 import           System.Environment
+import           System.IO
 import           System.IO.Silently
 import           System.Process
 import           System.Timeout
@@ -73,6 +74,17 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
         writeFile "file" "bar"
         output :: String <- cs <$> replClient
         output `shouldSatisfy` ("bar" `isInfixOf`)
+
+    it "relays stderr" $ do
+      let config = Config {
+            replCommand = "ghci",
+            replAction = "True && ()",
+            replPrompt = "==> "
+          }
+      hSilence [stderr] $ withThread (replServer config) $ do
+        waitForFile ".repl-server.socket"
+        output :: String <- cs <$> replClient
+        output `shouldSatisfy` ("Couldn't match expected type ‘Bool’ with actual type ‘()’" `isInfixOf`)
 
 shouldTerminate :: IO a -> IO a
 shouldTerminate action = do

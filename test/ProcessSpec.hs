@@ -23,13 +23,13 @@ spec = around_ inTempDirectory $ do
 
     it "kills the process when the invoking thread is killed" $ do
       mvar <- newEmptyMVar
-      withProcess "ghci" $ \ (_, _, process) -> do
+      withProcess "ghci" $ \ (_, _, _, process) -> do
         putMVar mvar process
       process <- takeMVar mvar
       getProcessExitCode process `shouldReturn` Just (ExitFailure (- 15))
 
     it "allows to interact with stdin and stdout of the process" $ do
-      withProcess "ghci" $ \ (to, from, _) -> do
+      withProcess "ghci" $ \ (to, from, _, _) -> do
         hPutStrLn to "map succ \"aaa\""
         _ <- hGetLine from -- skipping one line of ghci info
         result <- hGetLine from

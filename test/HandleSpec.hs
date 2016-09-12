@@ -35,3 +35,10 @@ spec = do
       (readH, writeH) <- createPipe
       hPutStr writeH "foo ba bar" >> hFlush writeH
       readUntil "bar" readH `shouldReturn` "foo ba "
+
+  describe "captureWhile" $ do
+    it "allows to read from a handle while executing another action" $ do
+      (readH, writeH) <- createPipe
+      (captured, ()) <- captureWhile readH $ do
+        hPutStrLn writeH "foo" >> hFlush writeH
+      captured `shouldBe` "foo\n"
