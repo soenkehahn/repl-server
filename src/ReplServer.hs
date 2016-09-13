@@ -58,15 +58,6 @@ app config to from fromStdErr _request respond = do
   output <- executeReplAction config to from fromStdErr
   respond $ responseLBS ok200 [] (cs output)
 
-connectHandles :: Handle -> (MVar ByteString, Handle) -> IO ()
-connectHandles from (mvar, to) = do
-  eof <- hIsEOF from
-  when (not eof) $ do
-    c <- hGetChar from
-    hPutChar to c
-    modifyMVar_ mvar (\ old -> return (old <> cs [c]))
-    connectHandles from (mvar, to)
-
 withApplication :: Application -> IO a -> IO a
 withApplication application action = do
   removeSocketFile

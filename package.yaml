@@ -30,6 +30,7 @@ tests:
       - hspec
       - silently
       - mockery
+      - async
 
 executables:
   repl-server:

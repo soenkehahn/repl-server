@@ -2,6 +2,7 @@
 module HandleSpec where
 
 import           Control.Concurrent
+import           Control.Concurrent.Async
 import           System.IO
 import           System.Process
 import           Test.Hspec
@@ -18,12 +19,11 @@ spec = do
 
     it "blocks until it encounters the given string" $ do
       (readH, writeH) <- createPipe
-      mvar <- newEmptyMVar
-      _ <- forkIO $ do
-        readUntil "bar" readH >>= putMVar mvar
+      readResultA <- async $ do
+        readUntil "bar" readH
       threadDelay 100000
       hPutStr writeH "foo bar huhu" >> hFlush writeH
-      readMVar mvar `shouldReturn` "foo "
+      wait readResultA `shouldReturn` "foo "
 
     it "can be invoked twice" $ do
       (readH, writeH) <- createPipe
