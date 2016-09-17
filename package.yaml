@@ -19,6 +19,7 @@ dependencies:
 ghc-options:
   - -threaded
   - -Wall
+  - -fno-warn-name-shadowing
 
 tests:
   spec:

@@ -2,8 +2,6 @@
 
 module Handle where
 
-import           Control.Exception
-import           Data.Function
 import           System.IO
 
 readUntil :: String -> Handle -> IO String

@@ -28,7 +28,7 @@ spec = do
     it "can be invoked twice" $ do
       (readH, writeH) <- createPipe
       hPutStr writeH "foo bar huhu bar" >> hFlush writeH
-      readUntil "bar" readH
+      _ <- readUntil "bar" readH
       readUntil "bar" readH `shouldReturn` " huhu "
 
     it "can handle prefixes of the given string correctly" $ do

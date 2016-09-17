@@ -17,6 +17,6 @@ replClient = do
         connect sock socketAddr
         socketConnection sock 8192
   manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
-  request <- parseUrl "http://localhost/" -- dummy url
+  request <- parseUrlThrow "http://localhost/" -- dummy url
   response <- httpLbs request {checkStatus = \_ _ _ -> Nothing} manager
   return $ responseBody response

@@ -6,7 +6,6 @@ module ReplServer where
 import           Control.Concurrent
 import           Control.Exception
 import           Control.Monad
-import           Data.ByteString.Lazy (ByteString)
 import           Data.String
 import           Data.String.Conversions
 import           GHC.IO.Handle

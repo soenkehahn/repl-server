@@ -28,4 +28,4 @@ removeSocketFile :: IO ()
 removeSocketFile = void $ tryJust (guard . isDoesNotExistError) (removeFile socketName)
 
 socketConnection :: Socket -> Int -> IO Connection
-socketConnection sock chunksize = makeConnection (recv sock chunksize) (sendAll sock) (sClose sock)
+socketConnection sock chunksize = makeConnection (recv sock chunksize) (sendAll sock) (close sock)
