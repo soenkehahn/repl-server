@@ -5,6 +5,7 @@ module ReplServerSpec where
 
 import           Control.Concurrent
 import           Control.Exception
+import           Data.ByteString (ByteString)
 import           Data.List
 import           Data.String.Conversions
 import           System.Environment
@@ -69,10 +70,10 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
           }
       silence $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
-        output :: String <- cs <$> replClient
+        output :: String <- cs <$> replClient_ config
         output `shouldSatisfy` ("foo" `isInfixOf`)
         writeFile "file" "bar"
-        output :: String <- cs <$> replClient
+        output :: String <- cs <$> replClient_ config
         output `shouldSatisfy` ("bar" `isInfixOf`)
 
     it "relays stderr" $ do
@@ -83,8 +84,22 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
           }
       hSilence [stderr] $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
-        output :: String <- cs <$> replClient
+        output :: String <- cs <$> replClient_ config
         output `shouldSatisfy` ("Couldn't match expected type ‘Bool’ with actual type ‘()’" `isInfixOf`)
+
+    it "allows to specify the repl command" $ do
+      let config = Config {
+            replCommand = "ghci",
+            replAction = "True && ()",
+            replPrompt = "==> "
+          }
+      hSilence [stderr] $ withThread (replServer config) $ do
+        waitForFile ".repl-server.socket"
+        output :: String <- cs <$> replClient "1 + 2"
+        output `shouldBe` "3\n"
+
+replClient_ :: Config -> IO LBS
+replClient_ config = replClient (cs $ replAction config)
 
 shouldTerminate :: IO a -> IO a
 shouldTerminate action = do
