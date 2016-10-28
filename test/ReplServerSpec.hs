@@ -29,14 +29,14 @@ setTestPrompt action = do
     action
 
 spec :: Spec
-spec = around_ inTempDirectory $ around_ setTestPrompt $ do
+spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate $ do
   describe "replServer" $ do
     it "runs the specified command" $ do
       let config = Config {
             replCommand = "touch file",
             replPrompt = "==> "
           }
-      shouldTerminate $ withThread (replServer config) $ do
+      withThread (replServer config) $ do
         waitForFile "file"
 
   describe "replServer & replClient" $ do
@@ -45,7 +45,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
             replCommand = "ghci",
             replPrompt = "==> "
           }
-      shouldTerminate $ withThread (replServer config) $ do
+      withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
         _ <- replClient "writeFile \"file\" \"bla\""
         waitForFile "file"
@@ -55,13 +55,13 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
             replCommand = "ghci",
             replPrompt = "==> "
           }
-      output <- capture_ $ shouldTerminate $ withThread (replServer config) $ do
+      output <- capture_ $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
         _ <- replClient "23 + 42"
         threadDelay 300000
       output `shouldSatisfy` ("65" `isInfixOf`)
 
-    it "triggers a new invocation of the repl action" $ shouldTerminate $ do
+    it "triggers a new invocation of the repl action" $ do
       writeFile "file" "foo"
       let config = Config {
             replCommand = "ghci",
