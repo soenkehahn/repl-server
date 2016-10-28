@@ -6,18 +6,21 @@ module ReplServer where
 import           Control.Concurrent
 import           Control.Exception
 import           Control.Monad
+import           Control.Monad.IO.Class
+import           Data.ByteString (ByteString)
 import           Data.String
 import           Data.String.Conversions
 import           GHC.IO.Handle
-import           Network.HTTP.Types
 import           Network.Socket hiding (recv)
 import           Network.Wai
 import           Network.Wai.Handler.Warp (runSettingsSocket, defaultSettings)
 import           Prelude ()
 import           Prelude.Compat
+import           Servant.Server
 import           System.IO
 import           WithCli
 
+import           Api
 import           Handle
 import           Process
 import           Socket
@@ -53,9 +56,15 @@ executeReplAction config to from fromStdErr = do
   return (errOutput ++ "\n===\n" ++ stdOutput)
 
 app :: Config -> Handle -> Handle -> Handle -> Application
-app config to from fromStdErr _request respond = do
+app config to from fromStdErr = serve api $ server config to from fromStdErr
+
+server :: Config -> Handle -> Handle -> Handle -> Server Api
+server config to from fromStdErr = liftIO $ postAction config to from fromStdErr
+
+postAction :: Config -> Handle -> Handle -> Handle -> IO ByteString
+postAction config to from fromStdErr = do
   output <- executeReplAction config to from fromStdErr
-  respond $ responseLBS ok200 [] (cs output)
+  return $ cs output
 
 withApplication :: Application -> IO a -> IO a
 withApplication application action = do
