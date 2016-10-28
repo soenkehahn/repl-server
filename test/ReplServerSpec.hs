@@ -3,7 +3,6 @@
 
 module ReplServerSpec where
 
-import           Control.Concurrent
 import           Control.Exception
 import           Data.List
 import           Data.String.Conversions
@@ -55,8 +54,8 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate
             replPrompt = "==> "
           }
       output <- capture_ $ withReplSocket config $ do
-        _ <- replClient "23 + 42"
-        threadDelay 300000
+        _ <- replClient "writeFile \"file\" \"bla\" >> print (23 + 42)"
+        waitForFile "file"
       output `shouldSatisfy` ("65" `isInfixOf`)
 
     it "triggers a new invocation of the repl action" $ do
