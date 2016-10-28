@@ -3,12 +3,12 @@
 
 module Api where
 
-import           Data.ByteString.Lazy
+import           Data.Text.Lazy
 import           Data.Proxy
 import           Servant.API
 
 type Api =
-  Post '[OctetStream] ByteString
+  ReqBody '[JSON] (Maybe Text) :> Post '[PlainText] Text
 
 api :: Proxy Api
 api = Proxy

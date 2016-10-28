@@ -3,7 +3,7 @@ module ReplClient where
 
 import           Control.Monad
 import           Control.Monad.Trans.Except
-import           Data.ByteString.Lazy (ByteString)
+import           Data.Text.Lazy (Text)
 import           Network.HTTP.Client
 import           Network.Socket hiding (recv)
 import           Prelude ()
@@ -14,18 +14,18 @@ import           System.Exit
 import           Api
 import           Socket
 
-postAction :: Manager -> BaseUrl -> ClientM ByteString
+postAction :: Maybe Text -> Manager -> BaseUrl -> ClientM Text
 postAction = client api
 
-replClient :: IO ByteString
-replClient = do
+replClient :: Maybe Text -> IO Text
+replClient mAction = do
   let newConnection _ _ _ = do
         sock <- newSocket
         connect sock socketAddr
         socketConnection sock 8192
   manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
   let baseUrl = BaseUrl Http "localhost" 8080 "" -- dummy BaseUrl
-  try $ postAction manager baseUrl
+  try $ postAction mAction manager baseUrl
 
 try :: Show e => ExceptT e IO a -> IO a
 try action = do

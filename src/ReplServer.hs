@@ -4,12 +4,13 @@
 module ReplServer where
 
 import           Control.Concurrent
-import           Control.Exception
+import           Control.Exception hiding (Handler)
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Data.ByteString.Lazy (ByteString)
+import           Data.Maybe
 import           Data.String
 import           Data.String.Conversions
+import           Data.Text.Lazy (Text)
 import           GHC.IO.Handle
 import           Network.Socket hiding (recv)
 import           Network.Wai
@@ -39,7 +40,7 @@ replServer :: Config -> IO ()
 replServer config = do
   withProcess (replCommand config) $ \ (to, from, fromStdErr, _) -> do
     _ <- toNextPrompt config from
-    _ <- executeReplAction config to from fromStdErr
+    _ <- executeReplAction config to from fromStdErr Nothing
     withApplication (app config to from fromStdErr) $ do
       forever $ threadDelay 1000000
 
@@ -47,10 +48,10 @@ toNextPrompt :: Config -> Handle -> IO String
 toNextPrompt config from = do
   readUntil (replPrompt config) from
 
-executeReplAction :: Config -> Handle -> Handle -> Handle -> IO String
-executeReplAction config to from fromStdErr = do
+executeReplAction :: Config -> Handle -> Handle -> Handle -> Maybe Text -> IO String
+executeReplAction config to from fromStdErr mAction = do
   (errOutput, stdOutput) <- captureWhile fromStdErr $ do
-    hPutStrLn to (replAction config) >> hFlush to
+    hPutStrLn to (fromMaybe (replAction config) (fmap cs mAction)) >> hFlush to
     toNextPrompt config from
   hPutStrLn stderr errOutput >> hFlush stderr
   return (errOutput ++ "\n===\n" ++ stdOutput)
@@ -59,11 +60,11 @@ app :: Config -> Handle -> Handle -> Handle -> Application
 app config to from fromStdErr = serve api $ server config to from fromStdErr
 
 server :: Config -> Handle -> Handle -> Handle -> Server Api
-server config to from fromStdErr = liftIO $ postAction config to from fromStdErr
+server config to from fromStdErr = postAction config to from fromStdErr
 
-postAction :: Config -> Handle -> Handle -> Handle -> IO ByteString
-postAction config to from fromStdErr = do
-  output <- executeReplAction config to from fromStdErr
+postAction :: Config -> Handle -> Handle -> Handle -> Maybe Text -> Handler Text
+postAction config to from fromStdErr mAction = liftIO $ do
+  output <- executeReplAction config to from fromStdErr mAction
   return $ cs output
 
 withApplication :: Application -> IO a -> IO a
