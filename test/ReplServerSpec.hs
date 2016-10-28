@@ -40,31 +40,19 @@ spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence. hSil
 
   describe "replServer & replClient" $ do
     it "pipes the given repl action into the command" $ do
-      let config = Config {
-            replCommand = "ghci",
-            replPrompt = "==> "
-          }
-      withReplSocket config $ do
+      withReplSocket $ do
         _ <- replClient "writeFile \"file\" \"bla\""
         waitForFile "file"
 
     it "outputs the repl output to stdout" $ do
-      let config = Config {
-            replCommand = "ghci",
-            replPrompt = "==> "
-          }
-      output <- capture_ $ withReplSocket config $ do
+      output <- capture_ $ withReplSocket $ do
         _ <- replClient "writeFile \"file\" \"bla\" >> print (23 + 42)"
         waitForFile "file"
       output `shouldSatisfy` ("65" `isInfixOf`)
 
     it "triggers a new invocation of the repl action" $ do
       writeFile "file" "foo"
-      let config = Config {
-            replCommand = "ghci",
-            replPrompt = "==> "
-          }
-      silence $ withReplSocket config $ do
+      silence $ withReplSocket $ do
         output :: String <- cs <$> replClient "readFile \"file\""
         output `shouldSatisfy` ("foo" `isInfixOf`)
         writeFile "file" "bar"
@@ -73,29 +61,17 @@ spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence. hSil
 
     context "when a command writes to stdout" $ do
       it "relays the lines exactly" $ do
-        let config = Config {
-              replCommand = "ghci",
-              replPrompt = "==> "
-            }
-        silence $ withReplSocket config $ do
+        silence $ withReplSocket $ do
           output :: String <- cs <$> replClient "putStrLn \"boo\""
           lines output `shouldContain` ["boo"]
 
     it "relays stderr" $ do
-      let config = Config {
-            replCommand = "ghci",
-            replPrompt = "==> "
-          }
-      hSilence [stderr] $ withReplSocket config $ do
+      hSilence [stderr] $ withReplSocket $ do
         output :: String <- cs <$> replClient "True && ()"
         output `shouldSatisfy` ("Couldn't match expected type ‘Bool’ with actual type ‘()’" `isInfixOf`)
 
     it "allows to overwrite the repl action" $ do
-      let config = Config {
-            replCommand = "ghci",
-            replPrompt = "==> "
-          }
-      silence $ withReplSocket config $ do
+      silence $ withReplSocket $ do
         output :: String <- cs <$> replClient "putStrLn \"bar\""
         output `shouldContain` "bar"
 
@@ -106,7 +82,12 @@ shouldTerminate action = do
     Nothing -> throwIO $ ErrorCall "didn't terminate"
     Just a -> return a
 
-withReplSocket :: Config -> IO a -> IO a
-withReplSocket config action = withThread (replServer config) $ do
+withReplSocket :: IO a -> IO a
+withReplSocket action = withThread (replServer config) $ do
   waitForFile ".repl-server.socket"
   action
+  where
+    config = Config {
+      replCommand = "ghci",
+      replPrompt = "==> "
+    }
