@@ -34,79 +34,76 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
     it "runs the specified command" $ do
       let config = Config {
             replCommand = "touch file",
-            replAction = "",
             replPrompt = "==> "
           }
       shouldTerminate $ withThread (replServer config) $ do
         waitForFile "file"
 
+  describe "replServer & replClient" $ do
     it "pipes the given repl action into the command" $ do
       let config = Config {
             replCommand = "ghci",
-            replAction = "writeFile \"file\" \"bla\"",
             replPrompt = "==> "
           }
       shouldTerminate $ withThread (replServer config) $ do
+        waitForFile ".repl-server.socket"
+        _ <- replClient "writeFile \"file\" \"bla\""
         waitForFile "file"
 
     it "outputs the repl output to stdout" $ do
       let config = Config {
             replCommand = "ghci",
-            replAction = "23 + 42",
             replPrompt = "==> "
           }
       output <- capture_ $ shouldTerminate $ withThread (replServer config) $ do
+        waitForFile ".repl-server.socket"
+        _ <- replClient "23 + 42"
         threadDelay 300000
       output `shouldSatisfy` ("65" `isInfixOf`)
 
-  describe "replServer & replClient" $ do
     it "triggers a new invocation of the repl action" $ shouldTerminate $ do
       writeFile "file" "foo"
       let config = Config {
             replCommand = "ghci",
-            replAction = "readFile \"file\"",
             replPrompt = "==> "
           }
       silence $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
-        output :: String <- cs <$> replClient Nothing
+        output :: String <- cs <$> replClient "readFile \"file\""
         output `shouldSatisfy` ("foo" `isInfixOf`)
         writeFile "file" "bar"
-        output :: String <- cs <$> replClient Nothing
+        output :: String <- cs <$> replClient "readFile \"file\""
         output `shouldSatisfy` ("bar" `isInfixOf`)
 
     context "when a command writes to stdout" $ do
       it "relays the lines exactly" $ do
         let config = Config {
               replCommand = "ghci",
-              replAction = "putStrLn \"boo\"",
               replPrompt = "==> "
             }
         silence $ withThread (replServer config) $ do
           waitForFile ".repl-server.socket"
-          output :: String <- cs <$> replClient Nothing
+          output :: String <- cs <$> replClient "putStrLn \"boo\""
           lines output `shouldContain` ["boo"]
 
     it "relays stderr" $ do
       let config = Config {
             replCommand = "ghci",
-            replAction = "True && ()",
             replPrompt = "==> "
           }
       hSilence [stderr] $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
-        output :: String <- cs <$> replClient Nothing
+        output :: String <- cs <$> replClient "True && ()"
         output `shouldSatisfy` ("Couldn't match expected type ‘Bool’ with actual type ‘()’" `isInfixOf`)
 
     it "allows to overwrite the repl action" $ do
       let config = Config {
             replCommand = "ghci",
-            replAction = "putStrLn \"foo\"",
             replPrompt = "==> "
           }
       silence $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
-        output :: String <- cs <$> replClient (Just "putStrLn \"bar\"")
+        output :: String <- cs <$> replClient "putStrLn \"bar\""
         output `shouldContain` "bar"
 
 shouldTerminate :: IO a -> IO a

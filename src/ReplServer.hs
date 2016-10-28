@@ -8,7 +8,6 @@ import           Control.Concurrent
 import           Control.Exception hiding (Handler)
 import           Control.Monad
 import           Control.Monad.IO.Class
-import           Data.Maybe
 import           Data.String
 import           Data.String.Conversions
 import           Data.Text.Lazy (Text)
@@ -30,7 +29,6 @@ import           Socket
 data Config
   = Config {
     replCommand :: String,
-    replAction :: String,
     replPrompt :: String
   }
   deriving (Generic, Show)
@@ -42,7 +40,6 @@ replServer config = do
   withProcess (replCommand config) $ \ (to, from, errFrom, _) -> do
     let handles = ProcessHandles{to, from, errFrom}
     _ <- toNextPrompt config from
-    _ <- executeReplAction config handles Nothing
     withApplication (app config handles) $ do
       forever $ threadDelay 1000000
 
@@ -57,10 +54,10 @@ data ProcessHandles
     errFrom :: Handle
   }
 
-executeReplAction :: Config -> ProcessHandles -> Maybe Text -> IO String
-executeReplAction config ProcessHandles{to, from, errFrom} mAction = do
+executeReplAction :: Config -> ProcessHandles -> Text -> IO String
+executeReplAction config ProcessHandles{to, from, errFrom} action = do
   (errOutput, stdOutput) <- captureWhile errFrom $ do
-    hPutStrLn to (fromMaybe (replAction config) (fmap cs mAction)) >> hFlush to
+    hPutStrLn to (cs action) >> hFlush to
     toNextPrompt config from
   hPutStrLn stderr errOutput >> hFlush stderr
   return (errOutput ++ "\n===\n" ++ stdOutput)
@@ -71,9 +68,9 @@ app config handles = serve api $ server config handles
 server :: Config -> ProcessHandles -> Server Api
 server = postAction
 
-postAction :: Config -> ProcessHandles -> Maybe Text -> Handler Text
-postAction config handles mAction = liftIO $ do
-  output <- executeReplAction config handles mAction
+postAction :: Config -> ProcessHandles -> Text -> Handler Text
+postAction config handles action = liftIO $ do
+  output <- executeReplAction config handles action
   return $ cs output
 
 withApplication :: Application -> IO a -> IO a

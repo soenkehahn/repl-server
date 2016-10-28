@@ -14,18 +14,18 @@ import           System.Exit
 import           Api
 import           Socket
 
-postAction :: Maybe Text -> Manager -> BaseUrl -> ClientM Text
+postAction :: Text -> Manager -> BaseUrl -> ClientM Text
 postAction = client api
 
-replClient :: Maybe Text -> IO Text
-replClient mAction = do
+replClient :: Text -> IO Text
+replClient action = do
   let newConnection _ _ _ = do
         sock <- newSocket
         connect sock socketAddr
         socketConnection sock 8192
   manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
   let baseUrl = BaseUrl Http "localhost" 8080 "" -- dummy BaseUrl
-  try $ postAction mAction manager baseUrl
+  try $ postAction action manager baseUrl
 
 try :: Show e => ExceptT e IO a -> IO a
 try action = do
