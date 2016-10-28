@@ -75,6 +75,18 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
         output :: String <- cs <$> replClient
         output `shouldSatisfy` ("bar" `isInfixOf`)
 
+    context "when a command writes to stdout" $ do
+      it "relays the lines exactly" $ do
+        let config = Config {
+              replCommand = "ghci",
+              replAction = "putStrLn \"boo\"",
+              replPrompt = "==> "
+            }
+        silence $ withThread (replServer config) $ do
+          waitForFile ".repl-server.socket"
+          output :: String <- cs <$> replClient
+          lines output `shouldContain` ["boo"]
+
     it "relays stderr" $ do
       let config = Config {
             replCommand = "ghci",

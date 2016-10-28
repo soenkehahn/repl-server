@@ -1,1 +1,2 @@
 :set -itest -isrc -Wall
+:set -fno-warn-name-shadowing
