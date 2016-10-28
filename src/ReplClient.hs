@@ -2,14 +2,20 @@
 module ReplClient where
 
 import           Control.Monad
+import           Control.Monad.Trans.Except
 import           Data.ByteString.Lazy (ByteString)
 import           Network.HTTP.Client
-import           Network.HTTP.Types
 import           Network.Socket hiding (recv)
 import           Prelude ()
 import           Prelude.Compat
+import           Servant.Client
+import           System.Exit
 
+import           Api
 import           Socket
+
+postAction :: Manager -> BaseUrl -> ClientM ByteString
+postAction = client api
 
 replClient :: IO ByteString
 replClient = do
@@ -18,10 +24,12 @@ replClient = do
         connect sock socketAddr
         socketConnection sock 8192
   manager <- newManager defaultManagerSettings {managerRawConnection = return newConnection}
-  request <- do
-    r <- parseUrlThrow "http://localhost/" -- dummy url
-    return $ r{
-      method = methodPost
-    }
-  response <- httpLbs request {checkStatus = \_ _ _ -> Nothing} manager
-  return $ responseBody response
+  let baseUrl = BaseUrl Http "localhost" 8080 "" -- dummy BaseUrl
+  try $ postAction manager baseUrl
+
+try :: Show e => ExceptT e IO a -> IO a
+try action = do
+  r <- runExceptT action
+  case r of
+    Right a -> return a
+    Left err -> die (show err)

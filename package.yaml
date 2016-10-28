@@ -35,6 +35,7 @@ tests:
       - mockery
       - async
       - servant-server
+      - servant-client
 
 executables:
   repl-server:
@@ -47,3 +48,5 @@ executables:
     main: repl-client.hs
     source-dirs:
       - src
+    dependencies:
+      - servant-client
