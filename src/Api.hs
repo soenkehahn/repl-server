@@ -3,7 +3,7 @@
 
 module Api where
 
-import           Data.ByteString
+import           Data.ByteString.Lazy
 import           Data.Proxy
 import           Servant.API
 
