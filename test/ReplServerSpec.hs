@@ -28,7 +28,7 @@ setTestPrompt action = do
     action
 
 spec :: Spec
-spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate $ do
+spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence. hSilence [stderr]) $ do
   describe "replServer" $ do
     it "runs the specified command" $ do
       let config = Config {

@@ -4,13 +4,14 @@ module HandleSpec where
 import           Control.Concurrent
 import           Control.Concurrent.Async
 import           System.IO
+import           System.IO.Silently
 import           System.Process
 import           Test.Hspec
 
 import           Handle
 
 spec :: Spec
-spec = do
+spec = around_ silence $ do
   describe "readUntil" $ do
     it "reads until the specified string" $ do
       (readH, writeH) <- createPipe
