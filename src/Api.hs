@@ -8,7 +8,7 @@ import           Data.Proxy
 import           Servant.API
 
 type Api =
-  ReqBody '[JSON] (Maybe Text) :> Post '[PlainText] Text
+  ReqBody '[JSON] Text :> Post '[PlainText] Text
 
 api :: Proxy Api
 api = Proxy

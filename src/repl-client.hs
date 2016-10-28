@@ -10,5 +10,5 @@ import           ReplClient
 main :: IO ()
 main = do
   args <- getArgs
-  result <- replClient $ Just $ cs $ unwords args
+  result <- replClient $ cs $ unwords args
   Text.putStr result
