@@ -23,3 +23,21 @@ withProcess command action = do
     killProcess (_, _, _, process) = do
       terminateProcess process
       waitForProcess process
+
+{-
+main :: IO ()
+main = do
+  withProcess "stack exec -- ghci" $ \ (input, output, errOutput, ph) -> do
+    hSetBuffering stdout NoBuffering
+    Log.info "started"
+    forkIO $ do
+      hGetContents output >>= putStrLn
+    forkIO $ do
+      hGetContents errOutput >>= putStrLn
+    threadDelay 1000000
+    Log.info "sending command..."
+    hPutStrLn input "import Control.Concurrent"
+    hPutStrLn input "import Control.Monad"
+    hPutStrLn input "forkOS $ forever $ print ()"
+    hFlush input
+    forever $ threadDelay 1000000 -}
