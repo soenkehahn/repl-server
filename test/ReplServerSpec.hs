@@ -45,8 +45,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate
             replCommand = "ghci",
             replPrompt = "==> "
           }
-      withThread (replServer config) $ do
-        waitForFile ".repl-server.socket"
+      withReplSocket config $ do
         _ <- replClient "writeFile \"file\" \"bla\""
         waitForFile "file"
 
@@ -55,8 +54,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate
             replCommand = "ghci",
             replPrompt = "==> "
           }
-      output <- capture_ $ withThread (replServer config) $ do
-        waitForFile ".repl-server.socket"
+      output <- capture_ $ withReplSocket config $ do
         _ <- replClient "23 + 42"
         threadDelay 300000
       output `shouldSatisfy` ("65" `isInfixOf`)
@@ -67,8 +65,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate
             replCommand = "ghci",
             replPrompt = "==> "
           }
-      silence $ withThread (replServer config) $ do
-        waitForFile ".repl-server.socket"
+      silence $ withReplSocket config $ do
         output :: String <- cs <$> replClient "readFile \"file\""
         output `shouldSatisfy` ("foo" `isInfixOf`)
         writeFile "file" "bar"
@@ -81,8 +78,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate
               replCommand = "ghci",
               replPrompt = "==> "
             }
-        silence $ withThread (replServer config) $ do
-          waitForFile ".repl-server.socket"
+        silence $ withReplSocket config $ do
           output :: String <- cs <$> replClient "putStrLn \"boo\""
           lines output `shouldContain` ["boo"]
 
@@ -91,8 +87,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate
             replCommand = "ghci",
             replPrompt = "==> "
           }
-      hSilence [stderr] $ withThread (replServer config) $ do
-        waitForFile ".repl-server.socket"
+      hSilence [stderr] $ withReplSocket config $ do
         output :: String <- cs <$> replClient "True && ()"
         output `shouldSatisfy` ("Couldn't match expected type ‘Bool’ with actual type ‘()’" `isInfixOf`)
 
@@ -101,8 +96,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ around_ shouldTerminate
             replCommand = "ghci",
             replPrompt = "==> "
           }
-      silence $ withThread (replServer config) $ do
-        waitForFile ".repl-server.socket"
+      silence $ withReplSocket config $ do
         output :: String <- cs <$> replClient "putStrLn \"bar\""
         output `shouldContain` "bar"
 
@@ -112,3 +106,8 @@ shouldTerminate action = do
   case result of
     Nothing -> throwIO $ ErrorCall "didn't terminate"
     Just a -> return a
+
+withReplSocket :: Config -> IO a -> IO a
+withReplSocket config action = withThread (replServer config) $ do
+  waitForFile ".repl-server.socket"
+  action
