@@ -69,10 +69,10 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
           }
       silence $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
-        output :: String <- cs <$> replClient
+        output :: String <- cs <$> replClient Nothing
         output `shouldSatisfy` ("foo" `isInfixOf`)
         writeFile "file" "bar"
-        output :: String <- cs <$> replClient
+        output :: String <- cs <$> replClient Nothing
         output `shouldSatisfy` ("bar" `isInfixOf`)
 
     context "when a command writes to stdout" $ do
@@ -84,7 +84,7 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
             }
         silence $ withThread (replServer config) $ do
           waitForFile ".repl-server.socket"
-          output :: String <- cs <$> replClient
+          output :: String <- cs <$> replClient Nothing
           lines output `shouldContain` ["boo"]
 
     it "relays stderr" $ do
@@ -95,8 +95,19 @@ spec = around_ inTempDirectory $ around_ setTestPrompt $ do
           }
       hSilence [stderr] $ withThread (replServer config) $ do
         waitForFile ".repl-server.socket"
-        output :: String <- cs <$> replClient
+        output :: String <- cs <$> replClient Nothing
         output `shouldSatisfy` ("Couldn't match expected type ‘Bool’ with actual type ‘()’" `isInfixOf`)
+
+    it "allows to overwrite the repl action" $ do
+      let config = Config {
+            replCommand = "ghci",
+            replAction = "putStrLn \"foo\"",
+            replPrompt = "==> "
+          }
+      silence $ withThread (replServer config) $ do
+        waitForFile ".repl-server.socket"
+        output :: String <- cs <$> replClient (Just "putStrLn \"bar\"")
+        output `shouldContain` "bar"
 
 shouldTerminate :: IO a -> IO a
 shouldTerminate action = do
