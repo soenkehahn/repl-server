@@ -3,7 +3,8 @@ module ReplClient where
 
 import           Control.Monad
 import           Control.Monad.Trans.Except
-import           Data.Text.Lazy (Text)
+import           Data.Conduit
+import           Data.String.Conversions
 import           Network.HTTP.Client
 import           Network.Socket hiding (recv)
 import           Prelude ()
@@ -14,10 +15,10 @@ import           System.Exit
 import           Api
 import           Socket
 
-postAction :: Text -> Manager -> BaseUrl -> ClientM Text
+postAction :: LT -> Manager -> BaseUrl -> ClientM LT
 postAction = client api
 
-replClient :: Text -> IO Text
+replClient :: LT -> IO (Source ST)
 replClient action = do
   let newConnection _ _ _ = do
         sock <- newSocket
