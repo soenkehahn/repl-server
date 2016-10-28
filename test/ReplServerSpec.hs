@@ -28,7 +28,7 @@ setTestPrompt action = do
     action
 
 spec :: Spec
-spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence. hSilence [stderr]) $ do
+spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence . hSilence [stderr]) $ do
   describe "replServer" $ do
     it "runs the specified command" $ do
       let config = Config {
@@ -52,7 +52,7 @@ spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence. hSil
 
     it "triggers a new invocation of the repl action" $ do
       writeFile "file" "foo"
-      silence $ withReplSocket $ do
+      withReplSocket $ do
         output :: String <- cs <$> replClient "readFile \"file\""
         output `shouldSatisfy` ("foo" `isInfixOf`)
         writeFile "file" "bar"
@@ -61,7 +61,7 @@ spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence. hSil
 
     context "when a command writes to stdout" $ do
       it "relays the lines exactly" $ do
-        silence $ withReplSocket $ do
+        withReplSocket $ do
           output :: String <- cs <$> replClient "putStrLn \"boo\""
           lines output `shouldContain` ["boo"]
 
@@ -70,8 +70,8 @@ spec = around_ (inTempDirectory . setTestPrompt. shouldTerminate . silence. hSil
         output :: String <- cs <$> replClient "True && ()"
         output `shouldSatisfy` ("Couldn't match expected type ‘Bool’ with actual type ‘()’" `isInfixOf`)
 
-    it "allows to overwrite the repl action" $ do
-      silence $ withReplSocket $ do
+    it "relays stdout" $ do
+      withReplSocket $ do
         output :: String <- cs <$> replClient "putStrLn \"bar\""
         output `shouldContain` "bar"
 
