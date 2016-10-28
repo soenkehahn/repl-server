@@ -17,6 +17,7 @@ dependencies:
   - string-conversions
   - servant
   - transformers
+  - text
 
 ghc-options:
   - -threaded
